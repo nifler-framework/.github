@@ -1,6 +1,6 @@
 # NIFLER – High-Performance Numerical Computing for Erlang/OTP
 
-NIFLER is a comprehensive ecosystem of C NIF and Rust NIFs (via Rustler) libraries for high-performance numerical computing, signal processing, machine learning, and scientific applications in Erlang/OTP.
+NIFLER is a comprehensive ecosystem of C NIF and Rust NIFs (via Rustler) libraries for high-performance numerical computing, signal processing, machine learning, and scientific applications in Erlang/OTP. Currently, **3 projects are complete** (nifler_core foundation, erlgmp arbitrary-precision arithmetic, erlflint number theory with rigorous ball arithmetic), with **19 more planned** across signal processing, optimization, linear algebra, machine learning, audio-visual, and supplementary domains.
 
 **What is NIFLER?** NIFLER bridges the gap between Erlang's fault tolerance and scalability and the raw performance of numerical C/Rust libraries. It provides arbitrarily-precise arithmetic, linear algebra, signal transforms, and machine learning infrastructure with safe C/Rust integration, automatic resource management, and minimal overhead. Each package (_nifler_core_, _erlgmp_, planned _erlblas_, _erlfftw_, etc.) follows a unified design: opaque Erlang resources, dirty scheduler support for heavy ops, and standardized error handling.
 
@@ -12,10 +12,14 @@ NIFLER is a comprehensive ecosystem of C NIF and Rust NIFs (via Rustler) librari
 
 ## Features
 
-- **Multi-Package Ecosystem** – Modular, composable libraries targeting different numerical domains (foundation, arithmetic, linear algebra, signal processing, machine learning)
-  - Currently available: `nifler_core` (foundation), `erlgmp` (arbitrary-precision arithmetic)
-  - Planned Phase 1.2–1.4: `erlblas` (linear algebra), `erlfftw` (signal processing), `erlvolk` (SIMD)
-  - Planned Phase 2–6: advanced solvers, data frames, ML, audio/video, GPU acceleration
+- **Multi-Package Ecosystem** – Modular, composable libraries targeting different numerical domains
+  - **Phase 0 (Complete):** `nifler_core` (foundation, tensor type system, shared C helpers)
+  - **Phase 1 (In Progress):** `erlgmp` (arbitrary-precision arithmetic) ✅, `erlflint` (number theory + Arb rigorous balls) ✅, `erlblas` (linear algebra), `erlfftw` (signal processing), `erlmath` (Cephes special functions)
+  - **Phase 2:** `erlvolk` (SIMD), `erldsp` (audio DSP), `erlopt` (optimization + cminpack), `erlode` (ODE/DAE solvers), `erlhighs` (LP/MIP), `erlgsl` (quadrature/interpolation/statistics), `erlsym` (symbolic algebra)
+  - **Phase 3:** `erlsndfile` (audio I/O), `erlopus` (codec), `erlrubberband` (time-stretch), `erlffmpeg` (video/audio), `erlopencv` (computer vision)
+  - **Phase 4:** `erltorch` (ML inference)
+  - **Phase 5:** `erlsparse` (sparse linear algebra), `erlgraph` (graph algorithms), `erlqhull` (computational geometry)
+  - **Deferred:** `erltorch_cuda`, `erlonnx`, `erleigen`, `erlceres`, `erlcgal`; database NIFs (`erldatafusion`, `erldelta`, `erliceberg`) excluded
 
 - **Arbitrary-Precision Arithmetic** – GMP-backed integers, rational numbers, and MPFR-backed decimal floats with configurable precision (erlgmp)
   - Integer operations: add, subtract, multiply, divide, power, square root, comparison, sign, absolute value
@@ -147,55 +151,111 @@ ok = nifler_tensor:validate(Tensor),
 
 ## Core Packages
 
-### [nifler_core](nifler_core/README.md) — Foundation Library
+### Phase 0: Foundation — Complete ✅
+
+#### [nifler_core](nifler_core/README.md) — Foundation Library
 
 Foundational abstractions for all NIFLER packages:
-- **Canonical Tensor Type System** – Unified 4-tuple representation for all numerical operations
-- **Type Definitions** – Erlang and C definitions for layouts, data types, and shapes
+- **Canonical Tensor Type System** – Unified 4-tuple `{Layout, DType, Shape, Binary}` for all numerical operations
+- **Type Definitions** – Erlang and C definitions for layouts (row/col major), data types (8 numeric types), and shapes
 - **Tensor Operations** – Construction, validation, element access, layout conversion
 - **C NIF Helpers** – Macros, inline functions, atom converters for rapid C NIF development
-- **Error Handling** – Standardized error constructors for consistency across ecosystem
+- **Error Handling** – Standardized 14 error constructors for consistency across ecosystem
 
-**Status:** ✅ Complete. [Documentation](nifler_core/README.md)
+**Status:** ✅ Complete ([API](nifler_core/docs/API_Documentation_nifler_core.md), [Developer Ref](nifler_core/docs/Developer_Reference_nifler_core.md))
 
-### [erlgmp](erlgmp/README.md) — Arbitrary-Precision Arithmetic
+### Phase 1: Core Numerics — In Progress (2 of 5 complete)
+
+#### [erlgmp](erlgmp/README.md) — Arbitrary-Precision Arithmetic ✅ Complete
 
 GMP and MPFR bindings for unlimited-precision numerics:
-- **Integer Operations (mpz_*)** – Add, subtract, multiply, divide, power, square root, bitwise, modular arithmetic (mpz_powm, mpz_gcd, mpz_invert, division modes, extended GCD)
-- **Floating-Point (mpfr_*)** – Add, multiply, divide, power, square root with configurable precision and rounding
+- **Integer Operations (mpz_*)** – 61 functions: arithmetic, division modes, modular exponentiation, GCD/LCM, primality testing, factorization, number theory
+- **Rational Operations (mpq_*)** – 18 functions: rational arithmetic with automatic normalization
+- **Floating-Point (mpfr_*)** – 90 functions: arithmetic with configurable precision and rounding modes, transcendental functions (sin, cos, exp, log), special functions (gamma, zeta, Airy, beta), constants
 - **Serialization** – Binary and string conversion for storage and transmission
 - **Dirty Scheduler Support** – Heavy operations avoid blocking main scheduler
 
-**Status:** ✅ Complete. [Documentation](erlgmp/README.md)
+**Status:** ✅ Complete, 112 total function signatures ([API](erlgmp/docs/API_Documentation_erlgmp.md), [Developer Ref](erlgmp/docs/Developer_Reference_erlgmp.md))
 
-### [erlblas](erlblas/README.md) — Linear Algebra (Planned Phase 1.2)
+#### [erlflint](erlflint/README.md) — Number Theory + Rigorous Ball Arithmetic ✅ Complete
+
+FLINT 3 + Arb bindings for exact integer algebra and certified numerical enclosures:
+- **Exact Integer Operations (fmpz_*)** – Arithmetic, division, power, GCD, LCM, factorization, primality testing
+- **Polynomial Arithmetic (fmpz_poly_*)** – Construction, arithmetic, GCD over Z[x]
+- **Rigorous Ball Arithmetic (arb_*)** – Midpoint-radius real balls with guaranteed error bounds, arithmetic, special functions, predicates
+- **Complementary to erlgmp** – `erlflint` provides rigorous certification (Arb balls) where `erlgmp` provides speed (floating-point approximation)
+
+**Status:** ✅ Complete, 42 function signatures ([API](erlflint/docs/API_Documentation_erlflint.md), [Developer Ref](erlflint/docs/Developer_Reference_erlflint.md))
+
+#### [erlblas](erlblas/README.md) — Linear Algebra (Planned Phase 1.3)
 
 OpenBLAS + LAPACK bindings:
-- **Matrix Operations** — Matrix-matrix multiply, matrix-vector multiply, transpose
-- **Linear Solvers** — LU decomposition, Cholesky, QR factorization
+- **Matrix Operations** — Matrix-matrix multiply, matrix-vector multiply, transpose, level 1-3 BLAS
+- **Linear Solvers** — LU, Cholesky, QR factorization
 - **Eigenvalue Solvers** — EVD, SVD for spectral analysis
-
-**Status:** 🔄 Planned for Phase 1.2
-
-### [erlfftw](erlfftw/README.md) — Signal Processing (Planned Phase 1.3)
-
-FFTW bindings for fast Fourier transforms:
-- **FFT Operations** — Forward and inverse FFT, real-valued FFT, multidimensional transforms
-- **Convolution** — Direct and fast convolution
-- **Windowing** — Built-in window functions for spectral analysis
 
 **Status:** 🔄 Planned for Phase 1.3
 
-### Additional Packages (Planned Phases 1–6)
+#### [erlfftw](erlfftw/README.md) — Signal Processing (Planned Phase 1.4)
 
+FFTW3 bindings for fast Fourier transforms:
+- **FFT Operations** — Forward/inverse FFT, real-valued FFT, multidimensional transforms
+- **Convolution** — Direct and fast convolution
+- **Planning** — Cached plans for repeated operations across same shape
+
+**Status:** 🔄 Planned for Phase 1.4
+
+#### [erlmath](erlmath/README.md) — Special Functions (Planned Phase 1.5)
+
+Cephes mathematical library + quasi-random sequences:
+- **Special Functions** — Fast approximations (reciprocal, inverse trig, Bessel, erf, gamma)
+- **Quasi-Random** – Sobol, Halton sequences for Monte Carlo
+- **Trade-off** – Speed optimized; use `erlflint` (Arb) for certified accuracy
+
+**Status:** 🔄 Planned for Phase 1.5
+
+### Phase 2: Signal, Optimization, Scientific — Planned (7 projects)
+
+**Core projects:**
 - **erlvolk** – VOLK SIMD kernels for vector operations
-- **erllapack** – Advanced linear algebra features (Planned Phase 2)
-- **erlpolars** – DataFrames and columnar data (Rust-based, Planned Phase 3)
-- **erlscipy** – Scientific computing utilities via Python port (Planned Phase 3)
-- **erlsox** – Audio processing via libsox (Planned Phase 4)
-- **erlffmpeg** – Video/audio codec integration (Planned Phase 4)
-- **erltorch** – Machine learning with LibTorch (Rust, Planned Phase 5)
-- **erlcuda** – GPU acceleration via CUDA (Planned Phase 6)
+- **erldsp** – liquid-dsp + Speex audio DSP
+- **erlopt** – NLopt + OSQP + cminpack (nonlinear least squares) optimization
+- **erlode** – SUNDIALS ODE/DAE solvers (IDA, CVODE)
+- **erlhighs** – HiGHS LP/MIP solver for linear/mixed-integer programming
+- **erlgsl** – GSL: quadrature, interpolation, statistics, root finding
+- **erlsym** – SymEngine symbolic algebra (updated 0.13.x)
+
+### Phase 3: Audio-Visual — Planned (5 projects)
+
+- **erlsndfile** – libsndfile + libsamplerate audio I/O and resampling
+- **erlopus** – Opus codec for high-quality audio compression
+- **erlrubberband** – RubberBand time-stretch and pitch-shift
+- **erlffmpeg** – FFmpeg libav* video/audio codecs (H.264, H.265, AV1, VP9, etc.)
+- **erlopencv** – OpenCV computer vision (detection, tracking, image processing)
+
+### Phase 4: Machine Learning — Planned (1 project)
+
+- **erltorch** – LibTorch CPU inference for deep learning models
+
+### Phase 5: Supplementary — Planned (3 projects, independent build)
+
+- **erlsparse** – SuiteSparse sparse linear algebra (LU, Cholesky, QR for sparse matrices)
+- **erlgraph** – igraph graph algorithms (shortest path, centrality, clustering)
+- **erlqhull** – Qhull computational geometry (convex hull, Delaunay, Voronoi)
+
+### Deferred — Future (5 projects)
+
+- **erltorch_cuda** – LibTorch CUDA (requires separate NVIDIA Docker)
+- **erlonnx** – ONNX Runtime inference (complement to erltorch)
+- **erleigen** – Eigen small-matrix operations (header-only C++)
+- **erlceres** – Ceres Solver bundle adjustment / SLAM
+- **erlcgal** – CGAL computational geometry (large C++ templates)
+
+### Excluded at This Time
+
+**Database/Data NIFs:** erldatafusion, erldelta, erliceberg, erlsqlparser (database-adjacent; Polars NIF exists)
+**BEAM-incompatible HPC:** SLATE, ScaLAPACK, PETSc, FEniCS (MPI-parallel; conflicts with BEAM scheduler model)
+See [new-plan-nifler.md](new-plan-nifler.md) for detailed rationale.
 
 ## Key Patterns
 
@@ -270,9 +330,10 @@ For detailed usage, see [scripts documentation](docs/Developer_Reference_nifler.
 
 ### Component Documentation
 
-Each package includes its own documentation:
-- [nifler_core API](nifler_core/docs/API_Documentation_nifler_core.md) & [Developer Reference](nifler_core/docs/Developer_Reference_nifler_core.md)
-- [erlgmp API](erlgmp/docs/API_Documentation_erlgmp.md) & [Developer Reference](erlgmp/docs/Developer_Reference_erlgmp.md)
+Each package includes its own documentation (4-doc set per [DOCUMENTATION_GUIDE_ITEMS.md](instr/DOCUMENTATION_GUIDE_ITEMS.md)):
+- nifler_core: [API](nifler_core/docs/API_Documentation_nifler_core.md), [Developer Ref](nifler_core/docs/Developer_Reference_nifler_core.md), [Examples](nifler_core/docs/Examples_&_Use_Cases_nifler_core.md)
+- erlgmp: [API](erlgmp/docs/API_Documentation_erlgmp.md), [Developer Ref](erlgmp/docs/Developer_Reference_erlgmp.md), [Examples](erlgmp/docs/Examples_&_Use_Cases_erlgmp.md)
+- erlflint: [API](erlflint/docs/API_Documentation_erlflint.md), [Developer Ref](erlflint/docs/Developer_Reference_erlflint.md), [Examples](erlflint/docs/Examples_&_Use_Cases_erlflint.md)
 
 ## API Overview
 
@@ -353,11 +414,16 @@ cd erlgmp && rebar3 ct --suite erlgmp_compare_gmp_official_SUITE
   - Layout conversion (3 tests)
   - Error constructors (3 tests)
 
-- **erlgmp**: 47 total tests
-  - Integration tests: 8 CT
-  - Unit tests: 25 EUnit (covering all exported functions)
-  - Property-based tests: 4 Proper tests (invariant checks)
+- **erlgmp**: 92 total tests (73 unit, 12 integration, 7 property-based)
+  - Unit tests: 73 EUnit (all exported functions)
+  - Integration tests: 12 CT (workflows, serialization, precision propagation)
+  - Property tests: 7 Proper (algebraic invariants)
   - Oracle validation: 10 tests comparing against GMP 6.3.0 and MPFR 4.2.1 reference binaries
+
+- **erlflint**: 40+ CT + EUnit tests
+  - Unit tests: fmpz, fmpz_poly, arb constructors and operations
+  - Integration tests: exact integer workflows, ball arithmetic with error bounds
+  - Property tests: commutativity, GCD closure, arithmetic identities
 
 **CI/CD Checklist**
 ```bash
@@ -396,55 +462,44 @@ sudo ./scripts/setup_system_deps.sh --all
 
 For detailed build instructions, see [Developer_Reference_nifler.md](docs/Developer_Reference_nifler.md).
 
-## Roadmap
+## Build Status & Roadmap
 
-**Phase 1: Core Numerical Packages** (1–3 months)
-- ✅ 1.1 erlgmp – Arbitrary-precision arithmetic via GMP/MPFR
-  - **Complete:** 195 unique function names (61 mpz + 5 rng + 18 mpq + 21 mpf + 90 mpfr), 244 exported arities
-  - **Tests:** 92 comprehensive tests (73 unit, 12 integration, 7 property-based) with full GMP/MPFR oracle validation
-  - **Capabilities:** Integers (including division modes, GCD/LCM, extended GCD, modular inverse), rationals, single-precision floats, decimal floats with explicit rounding modes, transcendental and special functions, type predicates, cross-type conversions
-- 🔄 1.2 erlblas – Linear algebra via OpenBLAS/LAPACK
-- ⏳ 1.3 erlfftw – Signal processing via FFTW
-- ⏳ 1.4 erlvolk – SIMD kernels via VOLK
+**Phase 0: Foundation — ✅ Complete**
+- ✅ nifler_core (shared C headers, Erlang conventions, tensor type system)
 
-**Phase 1.1 (erlgmp extensions) — Complete**
-- Implemented: Transcendental functions (log, exp, exp2, exp10, sin, cos, tan, asin, acos, atan, sinh, cosh, tanh)
-- Implemented: Special functions (gamma, lngamma, digamma, erf, erfc, Bessel j0/j1/y0/y1, zeta, Airy ai, dilogarithm li2, exponential integral eint, AGM agm, beta)
-- Implemented: Division modes (mpz_mod, mpz_tdiv_qr, mpz_fdiv_qr, mpz_cdiv_qr, mpz_divexact)
-- Implemented: GCD/LCM/extended GCD/modular inverse (mpz_gcd, mpz_lcm, mpz_gcdext, mpz_invert)
-- Implemented: Navigation, comparison predicates, rounding, and all mathematical constants (pi, euler, catalan, log2)
-- Future: Base conversion utilities (hex, binary, octal parsing/output)
+**Phase 1: Core Numerics — 🔄 In Progress (2/5 complete)**
+- ✅ 1.1 erlgmp – Arbitrary-precision arithmetic (195 functions, 244 arities, 92 tests with GMP/MPFR oracle validation)
+  - Integer (mpz): 61 functions with division modes, GCD/LCM, extended GCD, modular inverse, primality, factorization
+  - Rational (mpq): 18 functions with auto-normalization
+  - Floating-point (mpfr): 90 functions with configurable precision, transcendental, special, constants
+- ✅ 1.2 erlflint – Number theory + rigorous ball arithmetic (42 functions, 40+ tests)
+  - Exact integers (fmpz): arithmetic, number theory
+  - Polynomials (fmpz_poly): algebra over Z[x]
+  - Rigorous balls (arb): midpoint-radius arithmetic with certified error bounds
+- 🔄 1.3 erlblas – Linear algebra (OpenBLAS/LAPACK) — planned
+- 🔄 1.4 erlfftw – Signal processing (FFTW) — planned
+- 🔄 1.5 erlmath – Special functions (Cephes) — planned
 
-**Phase 2: Advanced Linear Algebra** (3–4 months)
-- LAPACK expert drivers (QR, SVD solvers)
-- Sparse matrix operations via CSparse
-- Matrix factorization and decomposition
-- High-precision matrix operations via erlgmp integration
+**Phase 2: Signal, Optimization, Scientific — 🔄 Planned (7 projects)**
+- erlvolk, erldsp, erlopt, erlode, erlhighs, erlgsl, erlsym
 
-**Phase 3: Data Manipulation** (4–6 months)
-- erlpolars – DataFrames via Rust Polars via Rustler
-- Columnar operations and group-by operations
-- Scientific utilities: interpolation, regression
-- Integration with erlgmp for arbitrary-precision analytics
+**Phase 3: Audio-Visual — ⏳ Planned (5 projects)**
+- erlsndfile, erlopus, erlrubberband, erlffmpeg, erlopencv
 
-**Phase 4: Audio/Video Processing** (6–8 months)
-- erlsox – Audio processing via libsox
-- erlffmpeg – Codec integration via libffmpeg
-- Real-time streaming pipelines
+**Phase 4: Machine Learning — ⏳ Planned (1 project)**
+- erltorch (LibTorch CPU)
 
-**Phase 5: Machine Learning** (8–10 months)
-- erltorch – Deep learning via LibTorch (Rust Tch-rs bindings)
-- Inference and fine-tuning support
-- Integration with erlblas for backprop
-- Integration with erlgmp for precision-critical training
+**Phase 5: Supplementary — ⏳ Planned (3 projects, parallel-buildable)**
+- erlsparse, erlgraph, erlqhull
 
-**Phase 6: GPU Acceleration & Distribution** (10–12 months)
-- erlcuda – GPU operations via CUDA
-- Multi-node distributed numeric engine
-- Memory-mapped tensor sharing across nodes
-- High-precision GPU kernels via erlgmp
+**Timeline outlook:**
+- Phases 1–2 (Numerics + Signal): 2–4 months
+- Phase 3 (Audio-Visual): 4–6 months  
+- Phase 4 (ML): 6–8 months
+- Phase 5 (Supplementary): parallel to Phases 2–4
+- Deferred projects (CUDA, ONNX, symbolic variants) addressed in follow-up planning
 
-See [Developer_Reference_nifler.md](docs/Developer_Reference_nifler.md) for detailed rationale, design decisions, and contribution guidelines.
+For detailed build order, architectural decisions, shared conventions, and per-project scaffolding templates, see [new-plan-nifler.md](new-plan-nifler.md).
 
 ## License
 
